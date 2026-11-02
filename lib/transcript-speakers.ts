@@ -77,6 +77,44 @@ export function interventionsLabel(count: number, seconds: number): string {
   return duration ? `${count} ${noun} · ${duration}` : `${count} ${noun}`;
 }
 
+function personKey(segments: ElevenLabsSegment[], person: ElevenLabsSpeaker, skipIndex: number): string {
+  const index = segments.findIndex(
+    (segment, segmentIndex) =>
+      segmentIndex !== skipIndex &&
+      Boolean(segment.speaker?.name?.trim()) &&
+      (segment.speaker.id?.trim() || segment.speaker.name.trim()) === person.id,
+  );
+  const match = segments[index];
+  return match ? diarizationKey(match, index) : `person:${person.id}`;
+}
+
+export function editSegment(
+  transcript: ElevenLabsTranscript,
+  index: number,
+  text: string,
+  person: ElevenLabsSpeaker | null,
+): ElevenLabsTranscript {
+  const target = transcript.segments[index];
+  if (!target) return transcript;
+  const current = target.speaker?.name?.trim() ? target.speaker.id?.trim() || target.speaker.name.trim() : null;
+  const reassigned = person != null && person.id !== current;
+  const key = reassigned ? personKey(transcript.segments, person, index) : null;
+  const next: ElevenLabsSegment = {
+    ...target,
+    text,
+    ...(reassigned
+      ? {
+          speaker: { id: person.id, name: person.name },
+          words: target.words?.map((word) => ({ ...word, speaker_id: key })),
+        }
+      : {}),
+  };
+  return {
+    ...transcript,
+    segments: transcript.segments.map((segment, segmentIndex) => (segmentIndex === index ? next : segment)),
+  };
+}
+
 export function assignSpeaker(
   transcript: ElevenLabsTranscript,
   key: string,
@@ -88,4 +126,14 @@ export function assignSpeaker(
       diarizationKey(segment, index) === key ? { ...segment, speaker: { id: person.id, name: person.name } } : segment,
     ),
   };
+}
+
+export function assignSegment(
+  transcript: ElevenLabsTranscript,
+  index: number,
+  person: ElevenLabsSpeaker,
+): ElevenLabsTranscript {
+  const target = transcript.segments[index];
+  if (!target) return transcript;
+  return editSegment(transcript, index, target.text, person);
 }

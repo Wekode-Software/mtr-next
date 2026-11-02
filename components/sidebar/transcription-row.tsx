@@ -24,10 +24,11 @@ export type TranscriptionRowProps = {
   selected: boolean;
   onSelect: (id: string) => void;
   onEdit: () => void;
+  onDownload: () => void;
   onDelete: () => void;
 };
 
-export function TranscriptionRow({ item, selected, onSelect, onEdit, onDelete }: TranscriptionRowProps) {
+export function TranscriptionRow({ item, selected, onSelect, onEdit, onDownload, onDelete }: TranscriptionRowProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -62,6 +63,13 @@ export function TranscriptionRow({ item, selected, onSelect, onEdit, onDelete }:
         <DropdownMenuContent align="start" side="right" sideOffset={4} className={itemMenuContentClassName}>
           <DropdownMenuItem className={itemMenuItemClassName} onClick={onEdit}>
             Modificar detalles
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className={itemMenuItemClassName}
+            disabled={item.status !== "ready"}
+            onClick={onDownload}
+          >
+            Descargar transcripción
           </DropdownMenuItem>
           <DropdownMenuSeparator className="mx-3.5 my-1.5 bg-[#14141414]" />
           <DropdownMenuItem

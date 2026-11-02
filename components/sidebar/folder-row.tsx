@@ -29,6 +29,7 @@ export type FolderRowProps = {
   onDuplicate: () => void;
   onDelete: () => void;
   onEditTranscription: (item: TranscriptionListItem) => void;
+  onDownloadTranscription: (item: TranscriptionListItem) => void;
   onDeleteTranscription: (item: TranscriptionListItem) => void;
 };
 
@@ -43,6 +44,7 @@ export function FolderRow({
   onDuplicate,
   onDelete,
   onEditTranscription,
+  onDownloadTranscription,
   onDeleteTranscription,
 }: FolderRowProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -99,6 +101,7 @@ export function FolderRow({
               selected={item.id === selectedId}
               onSelect={onSelect}
               onEdit={() => onEditTranscription(item)}
+              onDownload={() => onDownloadTranscription(item)}
               onDelete={() => onDeleteTranscription(item)}
             />
           ))}

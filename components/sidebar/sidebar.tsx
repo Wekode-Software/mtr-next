@@ -10,6 +10,7 @@ import { FolderRow } from "@/components/sidebar/folder-row";
 import { TranscriptionRow } from "@/components/sidebar/transcription-row";
 import { CreateFolderDialog } from "@/components/topbar/create-folder-dialog";
 import { NowPlayingBar } from "@/components/transcription-player/now-playing-bar";
+import { downloadTranscriptionMarkdown } from "@/lib/transcript-markdown";
 import type { Folder, TranscriptionListItem } from "@/lib/types";
 
 export type SidebarProps = {
@@ -55,13 +56,19 @@ export function Sidebar({
     ? visible.filter((item) => item.folder_id === deletingFolder.id).length
     : 0;
 
+  function handleDownloadTranscription(item: TranscriptionListItem) {
+    void downloadTranscriptionMarkdown(item.id).catch((error) => {
+      window.alert(error instanceof Error ? error.message : "No se pudo descargar la transcripción");
+    });
+  }
+
   return (
     <aside className="flex h-full w-[280px] shrink-0 flex-col border-r border-[#14141414] bg-white">
       <div className="flex min-h-0 grow flex-col overflow-y-auto p-2">
         <button
           type="button"
           onClick={onNewChat}
-          className="flex h-8 w-full items-center gap-2 overflow-hidden rounded-lg p-2 text-left hover:bg-[#1414140A]"
+          className="flex h-8 w-full shrink-0 items-center gap-2 overflow-hidden rounded-lg p-2 text-left hover:bg-[#1414140A]"
         >
           <span className="flex size-4 shrink-0 items-center justify-center">
             <Icon icon={Add01Icon} size={16} />
@@ -71,7 +78,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => setFolderOpen(true)}
-          className="flex h-8 w-full items-center gap-2 overflow-hidden rounded-lg p-2 text-left hover:bg-[#1414140A]"
+          className="flex h-8 w-full shrink-0 items-center gap-2 overflow-hidden rounded-lg p-2 text-left hover:bg-[#1414140A]"
         >
           <span className="flex size-4 shrink-0 items-center justify-center">
             <Icon icon={FolderAddIcon} size={16} />
@@ -96,6 +103,7 @@ export function Sidebar({
             }}
             onDelete={() => setDeletingFolder(folder)}
             onEditTranscription={setEditingTranscription}
+            onDownloadTranscription={handleDownloadTranscription}
             onDeleteTranscription={setDeletingTranscription}
           />
         ))}
@@ -109,6 +117,7 @@ export function Sidebar({
                 selected={item.id === selectedId}
                 onSelect={onSelect}
                 onEdit={() => setEditingTranscription(item)}
+                onDownload={() => handleDownloadTranscription(item)}
                 onDelete={() => setDeletingTranscription(item)}
               />
             ))}

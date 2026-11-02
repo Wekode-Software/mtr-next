@@ -43,6 +43,7 @@ export function useWorkspace() {
   const [composerFocusTick, setComposerFocusTick] = useState(0);
 
   const selectedIdRef = useRef<string | null>(urlTranscriptionId);
+  const detailRef = useRef<TranscriptionDetail | null>(null);
   const invalidUrlIdRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const detailAbortRef = useRef<AbortController | null>(null);
@@ -62,6 +63,8 @@ export function useWorkspace() {
     [pathname, router],
   );
 
+  detailRef.current = detail;
+
   const showTranscriptionPane = Boolean(selectedId) && !paneHidden;
   const paneDetail = selectedId && detail?.id === selectedId ? detail : null;
   const currentChat = chats.find((chat) => chat.id === currentChatId) ?? null;
@@ -75,7 +78,8 @@ export function useWorkspace() {
     detailAbortRef.current?.abort();
     const controller = new AbortController();
     detailAbortRef.current = controller;
-    setDetailLoading(true);
+    const refreshingOpen = detailRef.current?.id === id;
+    if (!refreshingOpen) setDetailLoading(true);
 
     try {
       const next = await fetchTranscriptionDetail(id, controller.signal);
@@ -165,7 +169,9 @@ export function useWorkspace() {
           return next;
         });
         if (item.id === selectedIdRef.current && (item.status === "ready" || item.status === "failed")) {
-          void loadDetail(item.id);
+          const open = detailRef.current;
+          const alreadyVisible = open?.id === item.id && open.status === item.status;
+          if (!alreadyVisible) void loadDetail(item.id);
         }
       });
     } catch {

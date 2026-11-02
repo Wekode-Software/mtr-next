@@ -19,7 +19,7 @@ export function ChatMessage({ message, compact, streaming, onMentionClick }: Cha
     return (
       <div className={`flex ${width}`}>
         <div className="w-fit max-w-full rounded-2xl border border-[#14141414] bg-[#F5F5F5] px-3.5 py-2.5">
-          <p className="inline-flex max-w-full flex-wrap items-center gap-1 text-[13px]/[18px] text-[#141414]">
+          <p className="inline-flex max-w-full flex-wrap items-center gap-1 text-justify text-[13px]/[18px] text-[#141414]">
             {parseMessageParts(text).map((part, index) =>
               part.type === "mention" ? (
                 <MentionBadge
@@ -46,7 +46,7 @@ export function ChatMessage({ message, compact, streaming, onMentionClick }: Cha
           mode={streaming ? "streaming" : "static"}
           animated={streaming}
           controls={false}
-          className="prose prose-neutral max-w-none prose-headings:mb-0 prose-headings:mt-0 prose-headings:text-[13px]/5 prose-headings:font-semibold prose-p:my-0 prose-p:text-[13px]/5 prose-p:text-[#141414] prose-li:text-[13px]/5 prose-ul:my-0 prose-ol:my-0"
+          className="prose prose-neutral max-w-none text-justify prose-headings:mb-0 prose-headings:mt-0 prose-headings:text-[13px]/5 prose-headings:font-semibold prose-p:my-0 prose-p:text-[13px]/5 prose-p:text-[#141414] prose-li:text-[13px]/5 prose-ul:my-0 prose-ol:my-0"
         >
           {text}
         </Streamdown>

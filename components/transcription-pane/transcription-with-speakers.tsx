@@ -1,16 +1,19 @@
 "use client";
 
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, PencilIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AssignSpeakerDialog } from "@/components/transcription-pane/assign-speaker-dialog";
+import { EditChatMessageDialog } from "@/components/transcription-pane/EditChatMessageDialog";
 import { usePlayback } from "@/components/playback-context";
 import { formatPlaybackClock } from "@/lib/format";
 import { updateTranscriptionTranscript } from "@/lib/mtr";
 import {
+  assignSegment,
   assignSpeaker,
   assignedPerson,
   avatarUrl,
   diarizationKey,
+  editSegment,
   isNamedSpeaker,
   knownPeople,
   segmentsForSpeaker,
@@ -50,6 +53,14 @@ export function TranscriptionWithSpeakers({
   const { playFrom } = usePlayback();
   const [transcript, setTranscript] = useState(source);
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<{
+    index: number;
+    start: number;
+    text: string;
+    person: ElevenLabsSpeaker | null;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef({
@@ -63,6 +74,8 @@ export function TranscriptionWithSpeakers({
   useEffect(() => {
     setTranscript(source);
     setActiveKey(null);
+    setActiveIndex(null);
+    setEditOpen(false);
   }, [transcriptionId, source]);
 
   const segments = transcript.segments ?? [];
@@ -93,19 +106,40 @@ export function TranscriptionWithSpeakers({
   if (activeKey) dialogRef.current = dialogModel;
   const dialog = activeKey ? dialogModel : dialogRef.current;
 
-  async function handleAssign(person: ElevenLabsSpeaker) {
-    if (!activeKey) return;
+  async function handleAssign(person: ElevenLabsSpeaker, applyToVoice: boolean) {
+    if (!activeKey || activeIndex == null) return;
     const previous = transcript;
-    const next = assignSpeaker(transcript, activeKey, person);
+    const next = applyToVoice
+      ? assignSpeaker(transcript, activeKey, person)
+      : assignSegment(transcript, activeIndex, person);
     setTranscript(next);
     setSaving(true);
     setError(null);
     try {
       await updateTranscriptionTranscript(transcriptionId, next);
       setActiveKey(null);
+      setActiveIndex(null);
     } catch (assignError) {
       setTranscript(previous);
       setError(assignError instanceof Error ? assignError.message : "No se pudo asignar la persona");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleEdit(person: ElevenLabsSpeaker | null, text: string) {
+    if (!editing) return;
+    const previous = transcript;
+    const next = editSegment(transcript, editing.index, text, person);
+    setTranscript(next);
+    setSaving(true);
+    setError(null);
+    try {
+      await updateTranscriptionTranscript(transcriptionId, next);
+      setEditOpen(false);
+    } catch (editError) {
+      setTranscript(previous);
+      setError(editError instanceof Error ? editError.message : "No se pudo guardar el mensaje");
     } finally {
       setSaving(false);
     }
@@ -128,7 +162,17 @@ export function TranscriptionWithSpeakers({
             <section key={`${key}-${index}`} className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
                 {named ? (
-                  <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setActiveKey(key);
+                      setActiveIndex(index);
+                    }}
+                    className={`flex cursor-pointer items-center gap-2 rounded-full py-0.5 pr-1.5 font-sans text-[13px]/5 font-semibold text-[#141414] outline-none hover:bg-[#1414140F] ${
+                      activeKey === key ? "bg-[#1414140F]" : ""
+                    }`}
+                  >
                     <img
                       src={avatarUrl(segment.speaker.id.trim() || label)}
                       alt=""
@@ -136,23 +180,15 @@ export function TranscriptionWithSpeakers({
                       height={20}
                       className="size-5 shrink-0 rounded-full"
                     />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setActiveKey(key);
-                      }}
-                      className="cursor-pointer rounded-md font-sans text-[13px]/5 font-semibold text-[#141414] outline-none hover:bg-[#1414140F]"
-                    >
-                      {label}
-                    </button>
-                  </>
+                    {label}
+                  </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => {
                       setError(null);
                       setActiveKey(key);
+                      setActiveIndex(index);
                     }}
                     className={`flex cursor-pointer items-center gap-1.5 rounded-full py-0.5 pr-1.5 pl-0.5 outline-none hover:bg-[#1414140A] ${
                       activeKey === key ? "bg-[#1414140F]" : ""
@@ -177,10 +213,28 @@ export function TranscriptionWithSpeakers({
                   <PlayMark />
                   <span className="font-sans text-xs/4 text-[#141414BD]">{clock}</span>
                 </button>
+                <button
+                  type="button"
+                  aria-label="Editar mensaje"
+                  onClick={() => {
+                    const name = segment.speaker?.name?.trim();
+                    setError(null);
+                    setEditing({
+                      index,
+                      start,
+                      text: segment.text.trim(),
+                      person: name ? { id: segment.speaker.id?.trim() || name, name } : null,
+                    });
+                    setEditOpen(true);
+                  }}
+                  className="ml-auto flex size-5 cursor-pointer items-center justify-center text-[#141414BD] outline-none hover:text-[#141414]"
+                >
+                  <PencilIcon className="size-3" strokeWidth={2.2} />
+                </button>
               </div>
               <div className={`flex flex-col gap-2.5 ${named ? "pl-7" : "pl-7.5"}`}>
                 {paragraphs.map((paragraph, paragraphIndex) => (
-                  <p key={paragraphIndex} className="font-sans text-[13px]/5 whitespace-pre-wrap text-[#141414]">
+                  <p key={paragraphIndex} className="font-sans text-[13px]/5 whitespace-pre-wrap text-justify text-[#141414]">
                     {paragraph}
                   </p>
                 ))}
@@ -201,11 +255,30 @@ export function TranscriptionWithSpeakers({
         onOpenChange={(open) => {
           if (!open) {
             setActiveKey(null);
+            setActiveIndex(null);
             setError(null);
           }
         }}
-        onAssign={(person) => {
-          void handleAssign(person);
+        onAssign={(person, applyToVoice) => {
+          void handleAssign(person, applyToVoice);
+        }}
+      />
+      <EditChatMessageDialog
+        open={editOpen}
+        start={editing?.start ?? 0}
+        people={dialogModel.people}
+        initialPerson={editing?.person ?? null}
+        initialText={editing?.text ?? ""}
+        saving={saving}
+        error={error}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditOpen(false);
+            setError(null);
+          }
+        }}
+        onSave={(person, text) => {
+          void handleEdit(person, text);
         }}
       />
     </>
