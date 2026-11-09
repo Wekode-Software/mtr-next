@@ -1,0 +1,30 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": [
+          "T4L763V5UL.es.wekode.mtrapp"
+        ],
+        "components": [
+          {
+            "/": "/login",
+            "comment": "Magic login link"
+          },
+          {
+            "/": "/register",
+            "comment": "Signup link"
+          },
+          {
+            "/": "/invitation",
+            "comment": "Team invitation"
+          },
+          {
+            "/": "/billing/*",
+            "comment": "Stripe return"
+          }
+        ]
+      }
+    ]
+  }
+}
